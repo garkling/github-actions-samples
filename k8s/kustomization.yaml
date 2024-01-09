@@ -8,4 +8,4 @@ namespace: hello-gitops
 images:
 - name: hello-gitops
   newName: garkling/hello-gitops
-  newTag: f614dea9d2be54fd45418872aab39fb55a1e0c1b
+  newTag: d8db3dffa3c8d0fc6ee6f1de698983f73c29636d
