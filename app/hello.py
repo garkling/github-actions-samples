@@ -7,7 +7,7 @@ config.read('config.properties')
 app = Flask(__name__)
 
 if config.getboolean("features", "feature_1") == True:
-	message = "Hello, Sasha!"
+	message = "Hello, Vlad!"
 else:
 	message = "Hello, World!"
 
@@ -17,4 +17,4 @@ def hello():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8050)
+	app.run(host='0.0.0.0', port=8050)
