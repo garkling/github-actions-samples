@@ -2,7 +2,7 @@ name: CI/CD Workflow -> GKE
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, test-actions ]
   pull_request:
     branches: [ main ]
 
@@ -96,6 +96,10 @@ jobs:
 
     - name: Set up GKE
       uses: google-github-actions/setup-gcloud@v2
+
+    - name: Get the GKE credentials so we can access kubectl
+      run: |
+          gcloud container clusters get-credentials "$GKE_CLUSTER" --region "$GKE_REGION"
 
     - name: Create namespace & set in Kustomize
       run: |
