@@ -99,7 +99,7 @@ jobs:
 
     - name: Get the GKE credentials so we can access kubectl
       run: |
-          gcloud container clusters get-credentials "$GKE_CLUSTER" --region "$GKE_REGION"
+          gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
 
     - name: Create namespace & set in Kustomize
       run: |
