@@ -136,14 +136,34 @@ jobs:
       run: |
         kubectl apply -k k8s/ 
    
-    # DO SOME CHECKS HERE BEFORE COMMIT
+    - name: Check deployment health
+      run: |
+        waiting=0;
+        delay=5;
+        while true; do
+        
+          status=$(kubectl get -n "$NEW_NAMESPACE" deployment.apps/"$IMAGE" -o jsonpath='{.status.conditions[?(@.type=="Available")].status}')
+          if [ "$status" == "True" ]; then
+            break
+          fi
+        
+          if [ $waiting -ge 25 ]; then
+            echo "Timeout: resource failed health checks..."
+            exit 1
+          fi
+        
+          total_wait_time=$((total_wait_time + delay))
+          echo "Resource has been not ready yet"
+          sleep $delay
+        
+        done
 
     - name: Remove old namespace
       run: |
         namespacePresentOld=`kubectl get ns | grep $OLD_NAMESPACE | wc -l`
         if [ $namespacePresentOld -eq 1 ]
         then
-          kubectl delete ns OLD_NAMESPACE --wait=true
+          kubectl delete ns $OLD_NAMESPACE --wait=true
         fi
  
     - name: Commit files
@@ -151,7 +171,8 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git commit -am "Bump docker tag"
-        
+        git pull
+
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
