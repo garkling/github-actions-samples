@@ -1,13 +1,13 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
-name: CI/CD Workflow
+name: CI/CD Workflow -> GKE
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
+env:
+  IMAGE: hello-gitops
 
 jobs:
   build:
@@ -67,7 +67,7 @@ jobs:
         file: ./app/Dockerfile
         builder: ${{ steps.buildx.outputs.name }}
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/hello-gitops:${{ github.sha }}, ${{ secrets.DOCKER_USERNAME }}/hello-gitops:latest
+        tags: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE }}:${{ github.sha }}, ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE }}:latest
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache
 
@@ -77,9 +77,8 @@ jobs:
     needs: build
     
     env:
-      PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-      GKE_CLUSTER: autopilot-cluster-1    # TODO: update to cluster name
-      GKE_REGION: us-central1	   # TODO: update to cluster region
+      GKE_CLUSTER: hm1-cluster
+      GKE_ZONE: us-central1-c
 
     steps:
     - name: Check out code
@@ -90,18 +89,19 @@ jobs:
       with:
         kustomize-version: "3.6.1"
 
-    # Alternative option - authentication via credentials json
-    - name: Authenticate to Google Cloud
-      uses: 'google-github-actions/auth@v2'
+    - uses: google-github-actions/setup-gcloud@1bee7de035d65ec5da40a31f8589e240eba8fde5
       with:
-        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+        service_account_key: ${{ secrets.GKE_KEY }}
+        project_id: ${{ secrets.GKE_PROJECT }}
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0
+    - run: |-
+        gcloud --quiet auth configure-docker
 
-    - name: Get the GKE credentials so we can deploy to the cluster
-      run: |
-        gcloud container clusters get-credentials "$GKE_CLUSTER" --region "$GKE_REGION"
+    - uses: google-github-actions/get-gke-credentials@db150f2cc60d1716e61922b832eae71d2a45938f
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
+        credentials: ${{ secrets.GKE_KEY }}
 
     - name: Create namespace & set in Kustomize
       run: |
@@ -131,7 +131,7 @@ jobs:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       run: |
        cd k8s
-       kustomize edit set image hello-gitops=$DOCKER_USERNAME/hello-gitops:$GITHUB_SHA
+       kustomize edit set image $IMAGE=$DOCKER_USERNAME/$IMAGE:$GITHUB_SHA
        cat kustomization.yaml
     
     - name: Deploy updated Kubernetes resources
@@ -139,17 +139,13 @@ jobs:
         kubectl apply -k k8s/ 
    
     # DO SOME CHECKS HERE BEFORE COMMIT
-    #- name: Deploy updated Kubernetes resources
-    #  run: |
-    #    kubectl apply -k k8s/
 
-    # REMOVE OLD DEPLOYMENT!!
     - name: Remove old namespace
       run: |
-        namespacePresentOld=`kubectl get ns | grep ${{ env.OLD_NAMESPACE }} | wc -l`
+        namespacePresentOld=`kubectl get ns | grep $OLD_NAMESPACE | wc -l`
         if [ $namespacePresentOld -eq 1 ]
         then
-          kubectl delete ns ${{ env.OLD_NAMESPACE }} --wait=true
+          kubectl delete ns $env.OLD_NAMESPACE --wait=true
         fi
  
     - name: Commit files
