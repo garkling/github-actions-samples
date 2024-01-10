@@ -4,8 +4,8 @@ resources:
 - deployment.yaml
 - service.yaml
 - ingress.yaml
-namespace: python-app-blue
+namespace: python-app-green
 images:
 - name: hello-gitops
   newName: garkling/hello-gitops
-  newTag: 6fc326d5e38f89628f81be1460fdd5aad05d98ed
+  newTag: f8341b7f2dc7172edc1cb25e06bd431c8a6ee209
